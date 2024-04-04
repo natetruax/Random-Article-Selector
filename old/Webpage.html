@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Journal Selector</title>
+  <style>
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    #output {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      height: 100px;
+      overflow-y: auto;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Journal Selector</h1>
+
+  <label>
+    <input type="checkbox" id="orgLettCheckbox"> Org. Lett
+  </label>
+
+  <label>
+    <input type="checkbox" id="orgChemCheckbox"> J. Org. Chem.
+  </label>
+
+  <label>
+    <input type="checkbox" id="amChemSocCheckbox"> J. Am. Chem. Soc.
+  </label>
+
+  <label>
+    Start Year:
+    <select id="startYear"></select>
+  </label>
+
+  <label>
+    End Year:
+    <select id="endYear"></select>
+    <span id="error" class="error"></span>
+  </label>
+
+  <button id="getArticleBtn">Get Article</button>
+
+  <div id="output"></div>
+
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script>
+    function updateYearsDropdowns() {
+      const startYearDropdown = $('#startYear');
+      const endYearDropdown = $('#endYear');
+
+      // Clear existing options
+      startYearDropdown.empty();
+      endYearDropdown.empty();
+
+      // Populate the start and end year drop-downs with years from 1950 to 2009
+      for (let year = 1950; year <= 2009; year++) {
+        startYearDropdown.append(`<option value='${year}'>${year}</option>`);
+        endYearDropdown.append(`<option value='${year}'>${year}</option>`);
+      }
+    }
+
+    function updateOutput() {
+      const orgLettChecked = $('#orgLettCheckbox').prop('checked');
+      const orgChemChecked = $('#orgChemCheckbox').prop('checked');
+      const amChemSocChecked = $('#amChemSocCheckbox').prop('checked');
+      const startYear = parseInt($('#startYear').val(), 10);
+      const endYear = parseInt($('#endYear').val(), 10);
+      const errorSpan = $('#error');
+
+      // Validate and display error if needed
+      if (startYear > endYear) {
+        errorSpan.text('End year must be greater than or equal to start year');
+        return; // Stop further processing
+      } else {
+        errorSpan.text('');
+      }
+
+      let outputText = 'Selected Journals: ';
+
+      if (orgLettChecked) {
+        outputText += 'Org. Lett, ';
+      }
+      if (orgChemChecked) {
+        outputText += 'J. Org. Chem., ';
+      }
+      if (amChemSocChecked) {
+        outputText += 'J. Am. Chem. Soc., ';
+      }
+
+      outputText += 'Year Range: ' + startYear + ' to ' + endYear;
+
+      $('#output').text(outputText);
+    }
+
+    function getRandomArticle() {
+      const selectedJournals = [];
+
+      if ($('#orgLettCheckbox').prop('checked')) {
+        selectedJournals.push('Org. Lett');
+      }
+      if ($('#orgChemCheckbox').prop('checked')) {
+        selectedJournals.push('J. Org. Chem.');
+      }
+      if ($('#amChemSocCheckbox').prop('checked')) {
+        selectedJournals.push('J. Am. Chem. Soc.');
+      }
+
+      if (selectedJournals.length === 0) {
+        alert('Please select at least one journal.');
+        return;
+      }
+
+      const startYear = parseInt($('#startYear').val(), 10);
+      const endYear = parseInt($('#endYear').val(), 10);
+
+      if (isNaN(startYear) || isNaN(endYear)) {
+        alert('Invalid year selection.');
+        return;
+      }
+
+      const randomYear = Math.floor(Math.random() * (endYear - startYear + 1)) + startYear;
+      const randomJournal = selectedJournals[Math.floor(Math.random() * selectedJournals.length)];
+
+      // Load JSON data from external file
+      $.ajax({
+        url: 'file://Users/nathanyal_truax1/Dropbox%20(Scripps%20Research)/Mac/Documents/Baran%20Lab/random%20shit/joc_dois.json', // replace with the correct path to your data file
+        dataType: 'json',
+        success: function(jsonData) {
+          const itemsForYear = jsonData[randomYear.toString()] || [];
+          const randomItem = itemsForYear[Math.floor(Math.random() * itemsForYear.length)];
+
+          const resultText = `Random Article:\nYear: ${randomYear}\nJournal: ${randomJournal}\nItem: ${randomItem}`;
+          $('#output').text(resultText);
+        },
+        error: function() {
+          alert('Error loading JSON data.');
+        }
+      });
+    }
+
+    // Initialize the drop-downs and set up event listeners
+    $(document).ready(function() {
+      updateYearsDropdowns();
+
+      $('#orgLettCheckbox, #orgChemCheckbox, #amChemSocCheckbox, #startYear, #endYear').on('change', updateOutput);
+
+      $('#getArticleBtn').on('click', getRandomArticle);
+    });
+  </script>
+
+</body>
+</html>

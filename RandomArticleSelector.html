@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="stylesheet" href="style.css">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Article Selector</title>
+  <style>
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Random Article Selector</h1>
+
+  <label>
+    <input type="checkbox" id="orgLettCheckbox"> Org. Lett.
+  </label>
+
+  <label>
+    <input type="checkbox" id="orgChemCheckbox"> J. Org. Chem.
+  </label>
+
+  <label>
+    <input type="checkbox" id="amChemSocCheckbox"> J. Am. Chem. Soc.
+  </label>
+
+  <br>
+
+  <label>
+    Start Year:
+    <select id="startYear"></select>
+  </label>
+
+  <label>
+    End Year:
+    <select id="endYear"></select>
+    <span id="error" class="error"></span>
+  </label>
+
+  <br>
+
+  <button id="getArticleBtn">Get Article</button>
+
+  <div id="output"></div>
+
+  <p> Notes</p>
+
+  <ol type="1"> 
+    <li>Simply click on the DOI: link to be redirected to the randomly selected article.</li>
+    <li>If Organic Letters is selected then the starting year will be 1999. This was the first year Organic Letters was published. </li>
+    <li>Some DOIs lead to a Masthead or Cover art. We appologize if this has been selected for you. Please just click the "Get Article" button again for a new article.</li>
+    <li>This has only been tested on Chrome, Firefox, Edge, and Safari. Likely you will need to allow "pop ups" on your browser for the article to open in a new tab.</li>
+  </ol>
+
+
+
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script>
+    function updateYearsDropdowns() {
+      const startYearDropdown = $('#startYear');
+      const endYearDropdown = $('#endYear');
+
+      // Clear existing options
+      startYearDropdown.empty();
+      endYearDropdown.empty();
+
+      // Populate the start and end year drop-downs with years from 1950 to 2009
+      for (let year = 1950; year <= 2015; year++) {
+        startYearDropdown.append(`<option value='${year}'>${year}</option>`);
+        endYearDropdown.append(`<option value='${year}'>${year}</option>`);
+      }
+      // Set the default value of the end year dropdown to 2015
+      endYearDropdown.val(2015);
+    }
+
+    function updateOutput() {
+      const orgLettChecked = $('#orgLettCheckbox').prop('checked');
+      const orgChemChecked = $('#orgChemCheckbox').prop('checked');
+      const amChemSocChecked = $('#amChemSocCheckbox').prop('checked');
+      const startYear = parseInt($('#startYear').val(), 10);
+      const endYear = parseInt($('#endYear').val(), 10);
+      const errorSpan = $('#error');
+
+      // Validate and display error if needed
+      if (startYear > endYear) {
+        errorSpan.text('End year must be greater than or equal to start year');
+        return; // Stop further processing
+      } else {
+        errorSpan.text('');
+      }
+
+      if (orgLettChecked && endYear < 1999) {
+        $('#orgLettCheckbox').prop('checked', false);
+        errorSpan.text('Org. Lett. can only be selected for end year > 1998');
+      }
+
+      let outputText = 'Selected Journals: ';
+
+      if (orgLettChecked) {
+        outputText += 'Org. Lett., ';
+      }
+      if (orgChemChecked) {
+        outputText += 'J. Org. Chem., ';
+      }
+      if (amChemSocChecked) {
+        outputText += 'J. Am. Chem. Soc., ';
+      }
+
+      outputText += 'Year Range: ' + startYear + ' to ' + endYear;
+
+      $('#output').text(outputText);
+    }
+
+    function getRandomArticle() {
+      const selectedJournals = [];
+
+      if ($('#orgLettCheckbox').prop('checked')) {
+        selectedJournals.push('Org. Lett.');
+      }
+      if ($('#orgChemCheckbox').prop('checked')) {
+        selectedJournals.push('J. Org. Chem.');
+      }
+      if ($('#amChemSocCheckbox').prop('checked')) {
+        selectedJournals.push('J. Am. Chem. Soc.');
+      }
+
+      if (selectedJournals.length === 0) {
+        alert('Please select at least one journal.');
+        return;
+      }
+
+      const startYear = parseInt($('#startYear').val(), 10);
+      const endYear = parseInt($('#endYear').val(), 10);
+
+      if (isNaN(startYear) || isNaN(endYear)) {
+        alert('Invalid year selection.');
+        return;
+      }
+
+      const randomJournal = selectedJournals[Math.floor(Math.random() * selectedJournals.length)];
+
+      if (randomJournal === 'Org. Lett.' && startYear < 1999) { 
+        AdjustedStartYear = 1999;
+      }
+      else {
+        AdjustedStartYear = startYear;
+      }
+
+      const randomYear = Math.floor(Math.random() * (endYear - AdjustedStartYear + 1)) + AdjustedStartYear;
+
+      let dataFile = '';
+
+      if (randomJournal === 'Org. Lett.') {
+        dataFile = 'orglett_doi.json';
+      } else if (randomJournal === 'J. Org. Chem.') {
+        dataFile = 'joc_doi.json';
+      } else if (randomJournal === 'J. Am. Chem. Soc.') {
+        dataFile = 'jacs_doi.json';
+      }
+
+      // Load JSON data from external file
+      $.ajax({
+        type: "GET",
+        url: dataFile, // replace with the correct path to your data file
+        dataType: 'json',
+        success: function(jsonData) {
+          console.log(jsonData)
+          const itemsForYear = jsonData[randomYear.toString()] || [];
+          const randomItem = itemsForYear[Math.floor(Math.random() * itemsForYear.length)];
+
+          const resultText = `Random Article:\nYear: ${randomYear}\nJournal: ${randomJournal}\nDOI: ${randomItem}`;
+          $('#output').text(resultText);
+
+         // Create a clickable link for the DOI
+        const doiLink = $('<a>').attr('href', randomItem).attr('target', '_blank').text(randomItem);
+        const outputDiv = $('#output').empty(); // Clear existing content
+        outputDiv.append($('<p>').text('Year: ' + randomYear));
+        outputDiv.append($('<p>').text('Journal: ' + randomJournal));
+        outputDiv.append($('<p>').text('DOI: ').append(doiLink));
+
+        // Fetch article metadata from Crossref API
+        $.ajax({
+          type: "GET",
+          url: "https://api.crossref.org/works/" + encodeURIComponent(randomItem),
+          success: function(data) {
+            // Extract article title from the response
+            const title = data.message.title[0];
+            outputDiv.append($('<p>').text('Article Title: ' + title));
+
+            // Extract and format authors from the response
+            const authors = data.message.author.map(author => author.given + ' ' + author.family).join(', ');
+            outputDiv.append($('<p>').text('Authors: ' + authors));
+          },
+          error: function() {
+            outputDiv.append($('<p>').text('Error: Unable to fetch article metadata.'));
+          }
+        });
+      },
+      error: function() {
+        alert('Error loading JSON data.');
+      }
+    });
+  }
+
+    // Initialize the drop-downs and set up event listeners
+    $(document).ready(function() {
+      updateYearsDropdowns();
+
+      $('#orgLettCheckbox, #orgChemCheckbox, #amChemSocCheckbox, #startYear, #endYear').on('change', updateOutput);
+
+      $('#getArticleBtn').on('click', getRandomArticle);
+    });
+  </script>
+
+  <footer>
+    <f> &copy 2024 Nathanyal J. Truax<br></f>
+    <f>Updated on: April 4 2024</f>
+  </footer>
+
+</body>
+
+</html>
